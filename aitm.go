@@ -78,20 +78,20 @@ type TokenContextKey struct{}
 func (s *Server) handleOther(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("auth_token")
 	if err != nil {
-		http.Redirect(w, r, "/signin", 303)
+		http.Redirect(w, r, "/signin", http.StatusSeeOther)
 		return
 	}
 	id, err := uuid.Parse(c.Value)
 	if err != nil {
 		log.Println(err)
-		http.Redirect(w, r, "/signin", 303)
+		http.Redirect(w, r, "/signin", http.StatusSeeOther)
 		return
 	}
 	s.RLock()
 	t, ok := s.tokenCache[id]
 	s.RUnlock()
 	if !ok || time.Now().After(t.Add(24*time.Hour)) {
-		http.Redirect(w, r, "/signin", 303)
+		http.Redirect(w, r, "/signin", http.StatusSeeOther)
 		return
 	}
 	r = r.WithContext(context.WithValue(r.Context(), TokenContextKey{}, &t))
@@ -106,31 +106,32 @@ func (s *Server) handleSignin(w http.ResponseWriter, r *http.Request) {
 		u := r.FormValue("username")
 		p := r.FormValue("password")
 		if u == "" || p == "" {
-			http.Redirect(w, r, "/signin", 303)
+			http.Redirect(w, r, "/signin", http.StatusSeeOther)
 			return
 		}
 		s.RLock()
 		c, ok := s.userDB[u]
 		s.RUnlock()
-		if ok {
-			if bcrypt.CompareHashAndPassword(c, []byte(p)) == nil {
-				id := uuid.New()
-				t := time.Now()
-				s.Lock()
-				s.tokenCache[id] = Token{t, r.RemoteAddr, u}
-				s.Unlock()
-				c := &http.Cookie{
-					Name:     "auth_token",
-					Value:    id.String(),
-					Expires:  t.Add(24 * time.Hour),
-					HttpOnly: true,
-				}
-				http.SetCookie(w, c)
-				http.Redirect(w, r, "/", 303)
-				return
+		if ok && bcrypt.CompareHashAndPassword(c, []byte(p)) == nil {
+			id := uuid.New()
+			t := time.Now()
+			s.Lock()
+			s.tokenCache[id] = Token{t, r.RemoteAddr, u}
+			s.Unlock()
+			c := &http.Cookie{
+				Name:     "auth_token",
+				Value:    id.String(),
+				Expires:  t.Add(24 * time.Hour),
+				HttpOnly: true,
 			}
+			http.SetCookie(w, c)
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
 		}
-		http.Redirect(w, r, "/signin", 303)
+		http.Redirect(w, r, "/signin", http.StatusSeeOther)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte(http.StatusText(http.StatusMethodNotAllowed)))
 	}
 }
 
