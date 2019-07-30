@@ -3,20 +3,20 @@ package aitm
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Token struct {
 	time.Time
-	IP string
+	IP       string
 	Username string
 }
 
@@ -28,9 +28,9 @@ type User struct {
 type Server struct {
 	*sync.RWMutex
 	*http.Server
-	child http.Handler
+	child      http.Handler
 	tokenCache map[uuid.UUID]Token
-	userDB map[string][]byte
+	userDB     map[string][]byte
 }
 
 func NewServer(h http.Handler) *Server {
@@ -41,8 +41,8 @@ func WrapServer(s *http.Server) *Server {
 	srv := &Server{
 		&sync.RWMutex{},
 		s,
-		s.Handler, 
-		make(map[uuid.UUID]Token), 
+		s.Handler,
+		make(map[uuid.UUID]Token),
 		make(map[string][]byte),
 	}
 	srv.Handler = srv.NewMux()
@@ -90,7 +90,7 @@ func (s *Server) handleOther(w http.ResponseWriter, r *http.Request) {
 	s.RLock()
 	t, ok := s.tokenCache[id]
 	s.RUnlock()
-	if !ok || time.Now().After(t.Add(24 * time.Hour)) {
+	if !ok || time.Now().After(t.Add(24*time.Hour)) {
 		http.Redirect(w, r, "/signin", 303)
 		return
 	}
@@ -120,9 +120,9 @@ func (s *Server) handleSignin(w http.ResponseWriter, r *http.Request) {
 				s.tokenCache[id] = Token{t, r.RemoteAddr, u}
 				s.Unlock()
 				c := &http.Cookie{
-					Name: "auth_token",
-					Value: id.String(),
-					Expires: t.Add(24 * time.Hour),
+					Name:     "auth_token",
+					Value:    id.String(),
+					Expires:  t.Add(24 * time.Hour),
 					HttpOnly: true,
 				}
 				http.SetCookie(w, c)

@@ -1,13 +1,13 @@
 package aitm
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
-	"net/url"
 	"net/http"
-	"net/http/httptest"
 	"net/http/cookiejar"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -73,7 +73,7 @@ func TestSignin(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := http.Client{Jar: j}
-	resp, err := c.PostForm(ts.URL + "/signin", v)
+	resp, err := c.PostForm(ts.URL+"/signin", v)
 	if err != nil {
 		t.Fatal(err)
 	}
