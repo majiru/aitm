@@ -14,17 +14,16 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-func initServer() (*Server, *httptest.Server) {
-	content := []byte("Hello World\n")
-	srv := NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(content)
-	}))
+func initServer(h http.HandlerFunc) (*Server, *httptest.Server) {
+	srv := NewServer(http.HandlerFunc(h))
 	ts := httptest.NewServer(srv.Handler)
 	return srv, ts
 }
 
 func TestRedirect(t *testing.T) {
-	_, ts := initServer()
+	_, ts := initServer(func(w http.ResponseWriter, r *http.Request) {
+		return
+	})
 	defer ts.Close()
 	resp, err := http.Get(ts.URL)
 	if err != nil {
@@ -43,7 +42,16 @@ func TestSignin(t *testing.T) {
 	const username = "chris"
 	const password = "danny bliss"
 
-	srv, ts := initServer()
+	srv, ts := initServer(func(w http.ResponseWriter, r *http.Request) {
+		cu, ok := r.Context().Value(TokenContextKey{}).(*Token)
+		if !ok {
+			t.Fatal("cast to Token failed")
+		}
+		if cu.Username != username {
+			t.Fatal("Context username did not match authed user")
+		}
+		w.Write([]byte("Hello World\n"))
+	})
 	defer ts.Close()
 
 	v := url.Values{}

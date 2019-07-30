@@ -1,6 +1,7 @@
 package aitm
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"io"
@@ -15,7 +16,8 @@ import (
 
 type Token struct {
 	time.Time
-	ip string
+	IP string
+	Username string
 }
 
 type User struct {
@@ -71,6 +73,8 @@ func (s *Server) LoadUsers(f io.Reader) error {
 	return nil
 }
 
+type TokenContextKey struct{}
+
 func (s *Server) handleOther(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("auth_token")
 	if err != nil {
@@ -90,6 +94,7 @@ func (s *Server) handleOther(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/signin", 303)
 		return
 	}
+	r = r.WithContext(context.WithValue(r.Context(), TokenContextKey{}, &t))
 	s.child.ServeHTTP(w, r)
 }
 
@@ -112,7 +117,7 @@ func (s *Server) handleSignin(w http.ResponseWriter, r *http.Request) {
 				id := uuid.New()
 				t := time.Now()
 				s.Lock()
-				s.tokenCache[id] = Token{t, r.RemoteAddr}
+				s.tokenCache[id] = Token{t, r.RemoteAddr, u}
 				s.Unlock()
 				c := &http.Cookie{
 					Name: "auth_token",
