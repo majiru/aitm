@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +32,7 @@ type Server struct {
 	child      http.Handler
 	tokenCache map[uuid.UUID]Token
 	userDB     map[string][]byte
+	Whitelist  []string
 }
 
 func NewServer(h http.Handler) *Server {
@@ -44,6 +46,7 @@ func WrapServer(s *http.Server) *Server {
 		s.Handler,
 		make(map[uuid.UUID]Token),
 		make(map[string][]byte),
+		[]string{},
 	}
 	srv.Handler = srv.NewMux()
 	return srv
@@ -76,6 +79,12 @@ func (s *Server) LoadUsers(f io.Reader) error {
 type TokenContextKey struct{}
 
 func (s *Server) handleOther(w http.ResponseWriter, r *http.Request) {
+	for _, str := range s.Whitelist {
+		if strings.HasPrefix(r.Host, str) {
+			s.child.ServeHTTP(w, r)
+			return
+		}
+	}
 	c, err := r.Cookie("auth_token")
 	if err != nil {
 		http.Redirect(w, r, "/signin", http.StatusSeeOther)
