@@ -1,17 +1,17 @@
 package main
 
-import(
+import (
 	"bufio"
 	"encoding/json"
+	"log"
 	"os"
 	"strings"
-	"log"
 
 	"github.com/majiru/aitm"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func main(){
+func main() {
 	var users []aitm.User
 	scan := bufio.NewScanner(os.Stdin)
 	for scan.Scan() {
